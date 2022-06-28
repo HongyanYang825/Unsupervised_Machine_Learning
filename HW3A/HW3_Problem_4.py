@@ -60,7 +60,7 @@ def designs_mapping(labels, k, designs_list):
         designs[labels_dict[i]] = designs_list[i]
     return designs
 
-def plot_pca(vectors, predicted_labels, labels, markers, colors):
+def plot_pca(vectors, markers, colors):
     '''
     Plot data in 3D with given 3 eigen values
     '''
@@ -73,6 +73,20 @@ def plot_pca(vectors, predicted_labels, labels, markers, colors):
     ax.set_ylabel("y")
     ax.set_zlabel("z")
     plt.show()
+
+def pca_fit(vectors, labels, n_components, k):
+    '''
+    Fit data with PCA and report performance
+    '''
+    pca = PCA(n_components = n_components)
+    vectors_pca = pca.fit_transform(vectors)
+    kmeans = KMeans(n_clusters = k, n_init = 10).fit(vectors_pca)
+    predicted_labels = get_true_labels(kmeans.labels_, labels, k)
+    purity = round(sum(predicted_labels == labels) / len(labels), 4)
+    gini_index = get_gini_index(predicted_labels, labels, 10)
+    print(f"## Purity: {purity}")
+    print(f"## Gini Index: {gini_index}")
+    return vectors_pca, predicted_labels
 
 def main():
     print("### A) Run KMeans on the MNIST dataset\n")
@@ -87,40 +101,33 @@ def main():
     print(f"## Gini Index: {gini_index}")
     print("\n")
     print("### B) Run PCA on the MNIST dataset\n")
-    pca = PCA(n_components = 20)
-    vectors_pca = pca.fit_transform(vectors)
-    kmeans = KMeans(n_clusters = 10, n_init = 10).fit(vectors_pca)
-    predicted_labels = get_true_labels(kmeans.labels_, labels, 10)
-    purity = round(sum(predicted_labels == labels) / len(labels), 4)
-    gini_index = get_gini_index(predicted_labels, labels, 10)
-    print(f"## Purity: {purity}")
-    print(f"## Gini Index: {gini_index}")
+    vectors_pca = pca_fit(vectors, labels, 20, 10)[0]
     print("\n")
     print("### C) Plot data in 3D with top 3 eigen values\n")
-    vectors_plot, labels_plot = vectors_pca[:300], labels[:300]
+    vectors_3, predicted_labels = pca_fit(vectors, labels, 3, 10)
+    vectors_plot, labels_plot = vectors_3[:300], labels[:300]
     predicted_labels_plot = predicted_labels[:300]
     markers_list = list(Line2D.markers.keys())
     markers = designs_mapping(labels_plot, 10, markers_list)
     colors = designs_mapping(predicted_labels_plot, 10, COLORS_LIST)
-    plot_pca(vectors_plot, predicted_labels_plot,
-             labels_plot, markers, colors)
+    plot_pca(vectors_plot, markers, colors)
     print()
     print("### D) Plot data in 3D with other 3 eigen values\n")
     replot = "Y"
     while replot == "Y":
         indices = np.random.choice(20, 3, replace = False)
-        vectors_random = vectors_plot[:, indices]
+        vectors_random = vectors_pca[:, indices]
         kmeans = KMeans(n_clusters = 10, n_init = 10).fit(vectors_random)
-        predicted_labels = get_true_labels(kmeans.labels_, labels_plot, 10)
-        purity = round(sum(predicted_labels == labels_plot) /
-                       len(labels_plot), 4)
-        gini_index = get_gini_index(predicted_labels, labels_plot, 10)
+        predicted_labels = get_true_labels(kmeans.labels_, labels, 10)
+        purity = round(sum(predicted_labels == labels) / len(labels), 4)
+        gini_index = get_gini_index(predicted_labels, labels, 10)
         print(f"## Purity: {purity}")
         print(f"## Gini Index: {gini_index}")
         print()
-        colors = designs_mapping(predicted_labels, 10, COLORS_LIST)
-        plot_pca(vectors_random, predicted_labels,
-                 labels_plot, markers, colors)
+        vectors_plot = vectors_random[:300]
+        predicted_labels_plot = predicted_labels[:300]
+        colors = designs_mapping(predicted_labels_plot, 10, COLORS_LIST)
+        plot_pca(vectors_plot, markers, colors)
         replot = input("Would you like to replot (Y/ N)? ").upper()
         print()
 
