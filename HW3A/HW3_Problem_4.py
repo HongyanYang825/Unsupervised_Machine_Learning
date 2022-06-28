@@ -110,7 +110,16 @@ def main():
     while replot == "Y":
         indices = np.random.choice(20, 3, replace = False)
         vectors_random = vectors_plot[:, indices]
-        plot_pca(vectors_random, predicted_labels_plot,
+        kmeans = KMeans(n_clusters = 10, n_init = 10).fit(vectors_random)
+        predicted_labels = get_true_labels(kmeans.labels_, labels_plot, 10)
+        purity = round(sum(predicted_labels == labels_plot) /
+                       len(labels_plot), 4)
+        gini_index = get_gini_index(predicted_labels, labels_plot, 10)
+        print(f"## Purity: {purity}")
+        print(f"## Gini Index: {gini_index}")
+        print()
+        colors = designs_mapping(predicted_labels, 10, COLORS_LIST)
+        plot_pca(vectors_random, predicted_labels,
                  labels_plot, markers, colors)
         replot = input("Would you like to replot (Y/ N)? ").upper()
         print()
